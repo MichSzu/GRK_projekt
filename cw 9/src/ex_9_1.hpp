@@ -15,9 +15,6 @@
 #include <assimp/postprocess.h>
 #include <string>
 
-//My files
-//#include "movement.h"
-
 
 //skybox
 float skybox_size = 10.0f;
@@ -96,6 +93,7 @@ namespace models {
 	Core::RenderContext roomContext;
 	Core::RenderContext spaceshipContext;
 	Core::RenderContext sphereContext;
+	Core::RenderContext lampContext;
 	Core::RenderContext windowContext;
 	Core::RenderContext testContext;
 }
@@ -105,6 +103,7 @@ GLuint depthMap;
 
 GLuint program;
 GLuint programSun;
+GLuint programLamp;
 GLuint programTest;
 GLuint programTex;
 GLuint programSkybox;
@@ -113,25 +112,41 @@ Core::Shader_Loader shaderLoader;
 
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
+Core::RenderContext lampContext;
 
+// SUN object/model
 glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
 glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
 glm::vec3 sunColor = glm::vec3(0.9f, 0.9f, 0.7f)*5;
 
+/* SUNLIGHT position */
+glm::vec3 pointlightPos = glm::vec3(0, 2.1, 0); // z jakiegoś powodu to steruje całym układem słonecznym
+glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
+
+
+// Lamp object/model
+glm::vec3 lampModelPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
+glm::vec3 lampModelDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
+glm::vec3 lampModelColor = glm::vec3(0.9f, 0.9f, 0.7f) * 5;
+
+/* LAMP position */
+glm::vec3 lamplightPos = glm::vec3(0, 2, 0);
+glm::vec3 lamplightColor = glm::vec3(0.9, 0.6, 0.6);
+
+// camera
 glm::vec3 cameraPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
 glm::vec3 cameraDir = glm::vec3(-0.354510f, 0.000000f, 0.935054f);
 
+// spaceship
 glm::vec3 spaceshipPos = glm::vec3(0.065808f, 1.250000f, -2.189549f);
 glm::vec3 spaceshipDir = glm::vec3(-0.490263f, 0.000000f, 0.871578f);
 GLuint VAO,VBO;
 
+//others
 float aspectRatio = 1.f;
-
 float exposition = 1.f;
 
-glm::vec3 pointlightPos = glm::vec3(0, 2, 0);
-glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
-
+// SHIPLIGHT
 glm::vec3 spotlightPos = glm::vec3(0, 0, 0);
 glm::vec3 spotlightConeDir = glm::vec3(0, 0, 0);
 glm::vec3 spotlightColor = glm::vec3(0.4, 0.4, 0.9)*3;
@@ -154,7 +169,6 @@ void updateDeltaTime(float time) {
 	if (deltaTime > 0.1) deltaTime = 0.1;
 	lastTime = time;
 }
-
 glm::mat4 createCameraMatrix()
 {
 	glm::vec3 cameraSide = glm::normalize(glm::cross(cameraDir,glm::vec3(0.f,1.f,0.f)));
@@ -194,6 +208,7 @@ void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec
 
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
 	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+
 	glUniformMatrix4fv(glGetUniformLocation(program, "transformation"), 1, GL_FALSE, (float*)&transformation);
 	glUniformMatrix4fv(glGetUniformLocation(program, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
 
@@ -206,12 +221,24 @@ void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec
 
 	glUniform3f(glGetUniformLocation(program, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
 
+	//SUN
 	glUniform3f(glGetUniformLocation(program, "sunDir"), sunDir.x, sunDir.y, sunDir.z);
 	glUniform3f(glGetUniformLocation(program, "sunColor"), sunColor.x, sunColor.y, sunColor.z);
 
+	// SUNLIGHT
 	glUniform3f(glGetUniformLocation(program, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
 	glUniform3f(glGetUniformLocation(program, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
+	// LAMP
+	glUniform3f(glGetUniformLocation(program, "lampModelDir"), lampModelDir.x, lampModelDir.y, lampModelDir.z);
+	glUniform3f(glGetUniformLocation(program, "lampModelColor"), lampModelColor.x, lampModelColor.y, lampModelColor.z);
+
+	// LAMPLIGHT
+	glUniform3f(glGetUniformLocation(program, "lamplightPos"), lamplightPos.x, lamplightPos.y, lamplightPos.z);
+	glUniform3f(glGetUniformLocation(program, "lamplightColor"), lamplightColor.x, lamplightColor.y, lamplightColor.z);
+
+	
+	// SPACESHIPLIGHTS
 	glUniform3f(glGetUniformLocation(program, "spotlightConeDir"), spotlightConeDir.x, spotlightConeDir.y, spotlightConeDir.z);
 	glUniform3f(glGetUniformLocation(program, "spotlightPos"), spotlightPos.x, spotlightPos.y, spotlightPos.z);
 	glUniform3f(glGetUniformLocation(program, "spotlightColor"), spotlightColor.x, spotlightColor.y, spotlightColor.z);
@@ -237,6 +264,7 @@ void renderScene(GLFWwindow* window)
 	updateDeltaTime(time);
 	renderShadowapSun();
 
+	
 	//space lamp
 	glUseProgram(programSun);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -246,13 +274,22 @@ void renderScene(GLFWwindow* window)
 	glUniform1f(glGetUniformLocation(programSun, "exposition"), exposition);
 	Core::DrawContext(sphereContext);
 
+	// lamp lamp
+	glUseProgram(programLamp);
+	glUniformMatrix4fv(glGetUniformLocation(programLamp, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniform3f(glGetUniformLocation(programLamp, "color"), lampModelColor.x / 2, lampModelColor.y / 2, lampModelColor.z / 2);
+	glUniform1f(glGetUniformLocation(programLamp, "exposition"), exposition);
+	Core::DrawContext(lampContext);
+	
 	glUseProgram(program);
 
 	drawObjectPBR(sphereContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
+	drawObjectPBR(sphereContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
 
-	drawObjectPBR(sphereContext,
-		glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)),
-		glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
+	// TODO ?!? Lamp
+	drawObjectPBR(sphereContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
+	drawObjectPBR(sphereContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
+
 
 	drawObjectPBR(models::bedContext, glm::mat4(), glm::vec3(0.03f, 0.03f, 0.03f), 0.2f, 0.0f);
 	drawObjectPBR(models::chairContext, glm::mat4(), glm::vec3(0.195239f, 0.37728f, 0.8f), 0.4f, 0.0f);
@@ -279,16 +316,21 @@ void renderScene(GLFWwindow* window)
 	//	glm::translate(cameraPos + 1.5 * cameraDir + cameraUp * -0.5f) * inveseCameraRotrationMatrix * glm::eulerAngleY(glm::pi<float>()),
 	//	glm::vec3(0.3, 0.3, 0.5)
 	//	);
+
+	// Ship 
 	drawObjectPBR(shipContext,
 		glm::translate(spaceshipPos) * specshipCameraRotrationMatrix * glm::eulerAngleY(glm::pi<float>()) * glm::scale(glm::vec3(0.03f)),
 		glm::vec3(0.3, 0.3, 0.5),
 		0.2,1.0
 	);
 
+	// spaceship
 	spotlightPos = spaceshipPos + 0.2 * spaceshipDir;
 	spotlightConeDir = spaceshipDir;
 	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.001f, 100.0f);
 	glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+
+	//skybox
 	glUseProgram(programSkybox);
 	glm::mat4 view = glm::mat4(glm::mat3(glm::lookAt(cameraPos, cameraPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f))));
 	glUniformMatrix4fv(glGetUniformLocation(programSkybox, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -346,6 +388,7 @@ void init(GLFWwindow* window)
 	program = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
 	programSun = shaderLoader.CreateProgram("shaders/shader_8_sun.vert", "shaders/shader_8_sun.frag");
+	programLamp = shaderLoader.CreateProgram("shaders/shader_8_sun.vert", "shaders/shader_8_sun.frag");
 	programSkybox = shaderLoader.CreateProgram("shader_skybox.vert", "shader_skybox.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
@@ -382,6 +425,51 @@ void init(GLFWwindow* window)
 void shutdown(GLFWwindow* window)
 {
 	shaderLoader.DeleteProgram(program);
+}
+
+
+//obsluga wejscia
+void processInput(GLFWwindow* window)
+{
+	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f,1.f,0.f)));
+	glm::vec3 spaceshipUp = glm::vec3(0.f, 1.f, 0.f);
+	float angleSpeed = 0.05f * deltaTime * 60;
+	float moveSpeed = 0.05f * deltaTime * 60;
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		glfwSetWindowShouldClose(window, true);
+	}
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		spaceshipPos += spaceshipDir * moveSpeed;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		spaceshipPos -= spaceshipDir * moveSpeed;
+	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+		spaceshipPos += spaceshipSide * moveSpeed;
+	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+		spaceshipPos -= spaceshipSide * moveSpeed;
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+		spaceshipPos += spaceshipUp * moveSpeed;
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+		spaceshipPos -= spaceshipUp * moveSpeed;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		spaceshipDir = glm::vec3(glm::eulerAngleY(angleSpeed) * glm::vec4(spaceshipDir, 0));
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
+
+	cameraPos = spaceshipPos - 0.5 * spaceshipDir + glm::vec3(0, 1, 0) * 0.2f;
+	cameraDir = spaceshipDir;
+
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+		exposition -= 0.05;
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+		exposition += 0.05;
+
+	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+		printf("spaceshipPos = glm::vec3(%ff, %ff, %ff);\n", spaceshipPos.x, spaceshipPos.y, spaceshipPos.z);
+		printf("spaceshipDir = glm::vec3(%ff, %ff, %ff);\n", spaceshipDir.x, spaceshipDir.y, spaceshipDir.z);
+	}
+
+	//cameraDir = glm::normalize(-cameraPos);
+
 }
 
 
