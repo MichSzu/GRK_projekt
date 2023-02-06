@@ -92,7 +92,9 @@ namespace models {
 	Core::RenderContext planeContext;
 	Core::RenderContext roomContext;
 	Core::RenderContext spaceshipContext;
+	// sun
 	Core::RenderContext sphereContext;
+	// added lamp
 	Core::RenderContext lampContext;
 	Core::RenderContext windowContext;
 	Core::RenderContext testContext;
@@ -120,7 +122,7 @@ glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
 glm::vec3 sunColor = glm::vec3(0.9f, 0.9f, 0.7f)*5;
 
 /* SUNLIGHT position */
-glm::vec3 pointlightPos = glm::vec3(0, 2.1, 0); // z jakiegoś powodu to steruje całym układem słonecznym
+glm::vec3 pointlightPos = glm::vec3(0, 2, 0); // z jakiegoś powodu to steruje całym układem słonecznym
 glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
 
 
@@ -129,8 +131,9 @@ glm::vec3 lampModelPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
 glm::vec3 lampModelDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
 glm::vec3 lampModelColor = glm::vec3(0.9f, 0.9f, 0.7f) * 5;
 
-/* LAMP position */
-glm::vec3 lamplightPos = glm::vec3(0, 2, 0);
+/* LAMPLIGHT position */
+// pierwszy to szerokość, drugi to wysokość a trzeci głębokość
+glm::vec3 lamplightPos = glm::vec3(-1.1, 1.2, 0.2); // lamp position
 glm::vec3 lamplightColor = glm::vec3(0.9, 0.6, 0.6);
 
 // camera
@@ -225,7 +228,7 @@ void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec
 	glUniform3f(glGetUniformLocation(program, "sunDir"), sunDir.x, sunDir.y, sunDir.z);
 	glUniform3f(glGetUniformLocation(program, "sunColor"), sunColor.x, sunColor.y, sunColor.z);
 
-	// SUNLIGHT
+	// SUNLIGHT - czemu jest lightPos, nie jest deklarowane
 	glUniform3f(glGetUniformLocation(program, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
 	glUniform3f(glGetUniformLocation(program, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
@@ -276,21 +279,23 @@ void renderScene(GLFWwindow* window)
 
 	// lamp lamp
 	glUseProgram(programLamp);
-	glUniformMatrix4fv(glGetUniformLocation(programLamp, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glm::mat4 transformation2 = viewProjectionMatrix * glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1));
+	glUniformMatrix4fv(glGetUniformLocation(programLamp, "transformation"), 1, GL_FALSE, (float*)&transformation2);
 	glUniform3f(glGetUniformLocation(programLamp, "color"), lampModelColor.x / 2, lampModelColor.y / 2, lampModelColor.z / 2);
 	glUniform1f(glGetUniformLocation(programLamp, "exposition"), exposition);
 	Core::DrawContext(lampContext);
 	
 	glUseProgram(program);
 
+	//SUN
 	drawObjectPBR(sphereContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
-	drawObjectPBR(sphereContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
+	drawObjectPBR(lampContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
 
 	// TODO ?!? Lamp
 	drawObjectPBR(sphereContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
-	drawObjectPBR(sphereContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
+	drawObjectPBR(lampContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
 
-
+	// models
 	drawObjectPBR(models::bedContext, glm::mat4(), glm::vec3(0.03f, 0.03f, 0.03f), 0.2f, 0.0f);
 	drawObjectPBR(models::chairContext, glm::mat4(), glm::vec3(0.195239f, 0.37728f, 0.8f), 0.4f, 0.0f);
 	drawObjectPBR(models::deskContext, glm::mat4(), glm::vec3(0.428691f, 0.08022f, 0.036889f), 0.2f, 0.0f);
@@ -302,6 +307,8 @@ void renderScene(GLFWwindow* window)
 	drawObjectPBR(models::planeContext, glm::mat4(), glm::vec3(0.402978f, 0.120509f, 0.057729f), 0.2f, 0.0f);
 	drawObjectPBR(models::roomContext, glm::mat4(), glm::vec3(0.9f, 0.9f, 0.9f), 0.8f, 0.0f);
 	drawObjectPBR(models::windowContext, glm::mat4(), glm::vec3(0.402978f, 0.120509f, 0.057729f), 0.2f, 0.0f);
+
+
 
 	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
 	glm::vec3 spaceshipUp = glm::normalize(glm::cross(spaceshipSide, spaceshipDir));
@@ -391,9 +398,12 @@ void init(GLFWwindow* window)
 	programLamp = shaderLoader.CreateProgram("shaders/shader_8_sun.vert", "shaders/shader_8_sun.frag");
 	programSkybox = shaderLoader.CreateProgram("shader_skybox.vert", "shader_skybox.frag");
 
+	//SUN and LAMP models
 	loadModelToContext("./models/sphere.obj", sphereContext);
-	loadModelToContext("./models/spaceship.obj", shipContext);
+	loadModelToContext("./models/sphere.obj", lampContext);
 
+
+	loadModelToContext("./models/spaceship.obj", shipContext);
 	loadModelToContext("./models/bed.obj", models::bedContext);
 	loadModelToContext("./models/chair.obj", models::chairContext);
 	loadModelToContext("./models/desk.obj", models::deskContext);
