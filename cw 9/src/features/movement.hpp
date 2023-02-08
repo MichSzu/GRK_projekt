@@ -1,3 +1,16 @@
+#include <iostream>
+
+float exposition = 1.f;
+
+// camera
+glm::vec3 cameraPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
+glm::vec3 cameraDir = glm::vec3(-0.354510f, 0.000000f, 0.935054f);
+
+// spaceship
+glm::vec3 spaceshipPos = glm::vec3(0.065808f, 1.250000f, -2.189549f);
+glm::vec3 spaceshipDir = glm::vec3(-0.490263f, 0.000000f, 0.871578f);
+GLuint VAO, VBO;
+
 //obsluga wejscia
 void processInput(GLFWwindow* window)
 {

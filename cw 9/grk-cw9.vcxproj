@@ -23,8 +23,12 @@
     <ClCompile Include="src\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\app_controller.hpp" />
     <ClInclude Include="src\Camera.h" />
+    <ClInclude Include="src\cameraMatrix.hpp" />
     <ClInclude Include="src\ex_9_1.hpp" />
+    <ClInclude Include="src\imports.hpp" />
+    <ClInclude Include="src\movement.hpp" />
     <ClInclude Include="src\objload.h" />
     <ClInclude Include="src\Render_Utils.h" />
     <ClInclude Include="src\Shader_Loader.h" />
@@ -34,7 +38,9 @@
     <ClInclude Include="src\SOIL\stbi_DDS_aug.h" />
     <ClInclude Include="src\SOIL\stbi_DDS_aug_c.h" />
     <ClInclude Include="src\SOIL\stb_image_aug.h" />
+    <ClInclude Include="src\skybox.hpp" />
     <ClInclude Include="src\Texture.h" />
+    <ClInclude Include="src\time_manager.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader_9_1.frag" />

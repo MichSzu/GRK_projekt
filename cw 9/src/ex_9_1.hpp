@@ -1,84 +1,6 @@
-﻿#include "glew.h"
-#include <GLFW/glfw3.h>
-#include "glm.hpp"
-#include "ext.hpp"
-#include <iostream>
-#include <cmath>
-
-#include "Shader_Loader.h"
-#include "Render_Utils.h"
-//#include "Texture.h"
-#include "SOIL/SOIL.h"
-#include "Box.cpp"
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <string>
-
-
-//skybox
-float skybox_size = 10.0f;
-float skyboxVertices[] = {
-	// positions          
-	-1.0f,  1.0f, -1.0f,
-	-1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-
-	-1.0f, -1.0f,  1.0f,
-	-1.0f, -1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f, -1.0f,
-	-1.0f,  1.0f,  1.0f,
-	-1.0f, -1.0f,  1.0f,
-
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-
-	-1.0f, -1.0f,  1.0f,
-	-1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f, -1.0f,  1.0f,
-	-1.0f, -1.0f,  1.0f,
-
-	-1.0f,  1.0f, -1.0f,
-	 1.0f,  1.0f, -1.0f,
-	 1.0f,  1.0f,  1.0f,
-	 1.0f,  1.0f,  1.0f,
-	-1.0f,  1.0f,  1.0f,
-	-1.0f,  1.0f, -1.0f,
-
-	-1.0f, -1.0f, -1.0f,
-	-1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f, -1.0f,
-	 1.0f, -1.0f, -1.0f,
-	-1.0f, -1.0f,  1.0f,
-	 1.0f, -1.0f,  1.0f
-};
-
-std::vector<std::string> faces
-{
-	"textures/skybox/right.jpg",
-	"textures/skybox/left.jpg",
-	"textures/skybox/top.jpg",
-	"textures/skybox/bottom.jpg",
-	"textures/skybox/front.jpg",
-	"textures/skybox/back.jpg"
-};
-
-unsigned int loadCubemap(std::vector<std::string> faces);
-
+﻿#include "features/imports.hpp"
 
 const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-
-int WIDTH = 500, HEIGHT = 500;
 
 namespace models {
 	Core::RenderContext bedContext;
@@ -92,62 +14,55 @@ namespace models {
 	Core::RenderContext planeContext;
 	Core::RenderContext roomContext;
 	Core::RenderContext spaceshipContext;
-	// sun
+	// sun 1
 	Core::RenderContext sphereContext;
 	// added lamp
 	Core::RenderContext lampContext;
 	Core::RenderContext windowContext;
 	Core::RenderContext testContext;
+	Core::RenderContext computerContext;
 }
 
 GLuint depthMapFBO;
 GLuint depthMap;
 
-GLuint program;
+//sun 2
 GLuint programSun;
 GLuint programLamp;
 GLuint programTest;
 GLuint programTex;
 GLuint programSkybox;
 
-Core::Shader_Loader shaderLoader;
-
+// NASZE KONTEKSTY MODELI (robione dla zmiany pozycji)
 Core::RenderContext shipContext;
+//sun 3
 Core::RenderContext sphereContext;
 Core::RenderContext lampContext;
+Core::RenderContext bedContext;
 
-// SUN object/model
+// SUN 4 object/model - to jest dziwne słońce, które koloruje podłogę, ale światło nie pochodzi z lampy na suficie
 glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
 glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
 glm::vec3 sunColor = glm::vec3(0.9f, 0.9f, 0.7f)*5;
 
-/* SUNLIGHT position */
-glm::vec3 pointlightPos = glm::vec3(0, 2, 0); // z jakiegoś powodu to steruje całym układem słonecznym
-glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
+/* SUNLIGHT 5 position */
+glm::vec3 pointlightPos = glm::vec3(0, 2, 0); // pozycja lampy pod sufitem
+// to światło działa
+glm::vec3 pointlightColor = glm::vec3(5.9, 5.6, 5.6);
 
 
 // Lamp object/model
 glm::vec3 lampModelPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
 glm::vec3 lampModelDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
-glm::vec3 lampModelColor = glm::vec3(0.9f, 0.9f, 0.7f) * 5;
+glm::vec3 lampModelColor = glm::vec3(0.9f, 0.9f, 100.7f) * 5;
 
 /* LAMPLIGHT position */
 // pierwszy to szerokość, drugi to wysokość a trzeci głębokość
 glm::vec3 lamplightPos = glm::vec3(-1.1, 1.2, 0.2); // lamp position
 glm::vec3 lamplightColor = glm::vec3(0.9, 0.6, 0.6);
 
-// camera
-glm::vec3 cameraPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
-glm::vec3 cameraDir = glm::vec3(-0.354510f, 0.000000f, 0.935054f);
-
-// spaceship
-glm::vec3 spaceshipPos = glm::vec3(0.065808f, 1.250000f, -2.189549f);
-glm::vec3 spaceshipDir = glm::vec3(-0.490263f, 0.000000f, 0.871578f);
-GLuint VAO,VBO;
-
-//others
-float aspectRatio = 1.f;
-float exposition = 1.f;
+//glm::vec3 lamplightConeDir = glm::vec3(0, 0, 0);
+//float lamplightPhi = 3.14 / 4;
 
 // SHIPLIGHT
 glm::vec3 spotlightPos = glm::vec3(0, 0, 0);
@@ -155,58 +70,7 @@ glm::vec3 spotlightConeDir = glm::vec3(0, 0, 0);
 glm::vec3 spotlightColor = glm::vec3(0.4, 0.4, 0.9)*3;
 float spotlightPhi = 3.14 / 4;
 
-float lastTime = -1.f;
-float deltaTime = 0.f;
-
-//skybox
-unsigned int cubemapTexture;
-unsigned int skyboxVAO, skyboxVBO;
-
-void updateDeltaTime(float time) {
-	if (lastTime < 0) {
-		lastTime = time;
-		return;
-	}
-
-	deltaTime = time - lastTime;
-	if (deltaTime > 0.1) deltaTime = 0.1;
-	lastTime = time;
-}
-glm::mat4 createCameraMatrix()
-{
-	glm::vec3 cameraSide = glm::normalize(glm::cross(cameraDir,glm::vec3(0.f,1.f,0.f)));
-	glm::vec3 cameraUp = glm::normalize(glm::cross(cameraSide,cameraDir));
-	glm::mat4 cameraRotrationMatrix = glm::mat4({
-		cameraSide.x,cameraSide.y,cameraSide.z,0,
-		cameraUp.x,cameraUp.y,cameraUp.z ,0,
-		-cameraDir.x,-cameraDir.y,-cameraDir.z,0,
-		0.,0.,0.,1.,
-		});
-	cameraRotrationMatrix = glm::transpose(cameraRotrationMatrix);
-	glm::mat4 cameraMatrix = cameraRotrationMatrix * glm::translate(-cameraPos);
-
-	return cameraMatrix;
-}
-
-glm::mat4 createPerspectiveMatrix()
-{
-	glm::mat4 perspectiveMatrix;
-	float n = 0.05;
-	float f = 20.;
-	float a1 = glm::min(aspectRatio, 1.f);
-	float a2 = glm::min(1 / aspectRatio, 1.f);
-	perspectiveMatrix = glm::mat4({
-		1,0.,0.,0.,
-		0.,aspectRatio,0.,0.,
-		0.,0.,(f+n) / (n - f),2*f * n / (n - f),
-		0.,0.,-1.,0.,
-		});
-
-	perspectiveMatrix=glm::transpose(perspectiveMatrix);
-
-	return perspectiveMatrix;
-}
-
+//w modelMatrix jest viewProjectionMatrix, pozycja i rozmiar obiektu
 void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color, float roughness, float metallic) {
 
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -224,11 +88,12 @@ void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec
 
 	glUniform3f(glGetUniformLocation(program, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
 
-	//SUN
+	//SUN 6
 	glUniform3f(glGetUniformLocation(program, "sunDir"), sunDir.x, sunDir.y, sunDir.z);
 	glUniform3f(glGetUniformLocation(program, "sunColor"), sunColor.x, sunColor.y, sunColor.z);
 
-	// SUNLIGHT - czemu jest lightPos, nie jest deklarowane
+	// SUNLIGHT 7
+	// lightPos i lightColor są deklaracjami głównego słońca... Nie mają definicji i nie da się ich użyć dwa razy, bo się nadpisuje
 	glUniform3f(glGetUniformLocation(program, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
 	glUniform3f(glGetUniformLocation(program, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
@@ -236,9 +101,13 @@ void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec
 	glUniform3f(glGetUniformLocation(program, "lampModelDir"), lampModelDir.x, lampModelDir.y, lampModelDir.z);
 	glUniform3f(glGetUniformLocation(program, "lampModelColor"), lampModelColor.x, lampModelColor.y, lampModelColor.z);
 
-	// LAMPLIGHT
+
+	// LAMPLIGHT - tu zamiast lamplightpos powinno być lightpos, ale może być tylko jedno źródło światła
 	glUniform3f(glGetUniformLocation(program, "lamplightPos"), lamplightPos.x, lamplightPos.y, lamplightPos.z);
 	glUniform3f(glGetUniformLocation(program, "lamplightColor"), lamplightColor.x, lamplightColor.y, lamplightColor.z);
+	// lampka stożkowa, nie kulista
+	//glUniform3f(glGetUniformLocation(program, "lamplightConeDir"), lamplightConeDir.x, lamplightConeDir.y, lamplightConeDir.z);
+	//glUniform1f(glGetUniformLocation(program, "lightPhi"), lamplightPhi);
 
 	
 	// SPACESHIPLIGHTS
@@ -268,7 +137,7 @@ void renderScene(GLFWwindow* window)
 	renderShadowapSun();
 
 	
-	//space lamp
+	//sun 8
 	glUseProgram(programSun);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
 	glm::mat4 transformation = viewProjectionMatrix * glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1));
@@ -287,21 +156,23 @@ void renderScene(GLFWwindow* window)
 	
 	glUseProgram(program);
 
-	//SUN
-	drawObjectPBR(sphereContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
-	drawObjectPBR(lampContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
+	//Dodatkowa planeta 1 - orbitujące coś
+	// DrawobjectPBR(co ma latać, wokół czego (pozycja początkowa) * jaka ma być szerokość orbity * jaka ma być prędkość (kątowa) * też wielkość orbity * rozmiar obiektu, kolor, roughness, metalic (odbicie światła) )
+	drawObjectPBR(shipContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.5)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(2.f, 0, 0)) * glm::scale(glm::vec3(0.01f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
+	//drawObjectPBR(lampContext, glm::translate(lamplightPos) * glm::scale(wglm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::scale(glm::vec3(0.3f)), glm::vec3(0.2, 0.7, 0.3), 0.3, 0.0);
 
-	// TODO ?!? Lamp
-	drawObjectPBR(sphereContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
-	drawObjectPBR(lampContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
+	// Dodatkowa planeta 2 - orbitujące coś
+	//drawObjectPBR(sphereContext, glm::translate(pointlightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
+	//drawObjectPBR(lampContext, glm::translate(lamplightPos) * glm::scale(glm::vec3(0.1)) * glm::eulerAngleY(time / 3) * glm::translate(glm::vec3(4.f, 0, 0)) * glm::eulerAngleY(time) * glm::translate(glm::vec3(1.f, 0, 0)) * glm::scale(glm::vec3(0.1f)), glm::vec3(0.5, 0.5, 0.5), 0.7, 0.0);
 
 	// models
+	// Kolejność zmiennych drawObjectPBR(kontekst modelu, poruszanie razem ze sceną, (kolor obiektu), x,  odbijanie światła)
 	drawObjectPBR(models::bedContext, glm::mat4(), glm::vec3(0.03f, 0.03f, 0.03f), 0.2f, 0.0f);
 	drawObjectPBR(models::chairContext, glm::mat4(), glm::vec3(0.195239f, 0.37728f, 0.8f), 0.4f, 0.0f);
 	drawObjectPBR(models::deskContext, glm::mat4(), glm::vec3(0.428691f, 0.08022f, 0.036889f), 0.2f, 0.0f);
 	drawObjectPBR(models::doorContext, glm::mat4(), glm::vec3(0.402978f, 0.120509f, 0.057729f), 0.2f, 0.0f);
 	drawObjectPBR(models::drawerContext, glm::mat4(), glm::vec3(0.428691f, 0.08022f, 0.036889f), 0.2f, 0.0f);
-	drawObjectPBR(models::marbleBustContext, glm::mat4(), glm::vec3(1.f, 1.f, 1.f), 0.5f, 1.0f);
+	drawObjectPBR(models::computerContext, glm::mat4(), glm::vec3(0.428691f, 0.08022f, 0.036889f), 0.2f, 0.0f);
 	drawObjectPBR(models::materaceContext, glm::mat4(), glm::vec3(0.9f, 0.9f, 0.9f), 0.8f, 0.0f);
 	drawObjectPBR(models::pencilsContext, glm::mat4(), glm::vec3(0.10039f, 0.018356f, 0.001935f), 0.1f, 0.0f);
 	drawObjectPBR(models::planeContext, glm::mat4(), glm::vec3(0.402978f, 0.120509f, 0.057729f), 0.2f, 0.0f);
@@ -361,36 +232,16 @@ void renderScene(GLFWwindow* window)
 	glUseProgram(0);
 	glfwSwapBuffers(window);
 }
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	aspectRatio = width / float(height);
-	glViewport(0, 0, width, height);
-	WIDTH = width;
-	HEIGHT = height;
-}
-void loadModelToContext(std::string path, Core::RenderContext& context)
-{
-	Assimp::Importer import;
-	const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_CalcTangentSpace);
 
-	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-	{
-		std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
-		return;
-	}
-	context.initFromAssimpMesh(scene->mMeshes[0]);
-}
 
 void init(GLFWwindow* window)
 {
-	//skybox
-	for (int i = 0; i < sizeof(skyboxVertices) / sizeof(int); i++) {
-		skyboxVertices[i] = skyboxVertices[i] * skybox_size;
-	}
-	cubemapTexture = loadCubemap(faces);
+	generateSkybox();
+
 
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+	// wygląda jak test głębokości do cieni
 	glEnable(GL_DEPTH_TEST);
 	program = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
@@ -400,7 +251,7 @@ void init(GLFWwindow* window)
 
 	//SUN and LAMP models
 	loadModelToContext("./models/sphere.obj", sphereContext);
-	loadModelToContext("./models/sphere.obj", lampContext);
+	loadModelToContext("./models/lamp.obj", lampContext);
 
 
 	loadModelToContext("./models/spaceship.obj", shipContext);
@@ -418,96 +269,13 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/sphere.obj", models::sphereContext);
 	loadModelToContext("./models/window.obj", models::windowContext);
 	loadModelToContext("./models/test.obj", models::testContext);
+	loadModelToContext("./models/pc.obj", models::computerContext);
 
-	// skybox VAO
-	glGenVertexArrays(1, &skyboxVAO);
-	glGenBuffers(1, &skyboxVBO);
-	glBindVertexArray(skyboxVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
 	glUseProgram(programSkybox);
 	glUniform1i(glGetUniformLocation(programSkybox, "skybox"), 0);
-
 }
 
-void shutdown(GLFWwindow* window)
-{
-	shaderLoader.DeleteProgram(program);
-}
-
-
-//obsluga wejscia
-void processInput(GLFWwindow* window)
-{
-	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f,1.f,0.f)));
-	glm::vec3 spaceshipUp = glm::vec3(0.f, 1.f, 0.f);
-	float angleSpeed = 0.05f * deltaTime * 60;
-	float moveSpeed = 0.05f * deltaTime * 60;
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, true);
-	}
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		spaceshipPos += spaceshipDir * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		spaceshipPos -= spaceshipDir * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
-		spaceshipPos += spaceshipSide * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-		spaceshipPos -= spaceshipSide * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-		spaceshipPos += spaceshipUp * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-		spaceshipPos -= spaceshipUp * moveSpeed;
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		spaceshipDir = glm::vec3(glm::eulerAngleY(angleSpeed) * glm::vec4(spaceshipDir, 0));
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
-
-	cameraPos = spaceshipPos - 0.5 * spaceshipDir + glm::vec3(0, 1, 0) * 0.2f;
-	cameraDir = spaceshipDir;
-
-	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-		exposition -= 0.05;
-	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-		exposition += 0.05;
-
-	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
-		printf("spaceshipPos = glm::vec3(%ff, %ff, %ff);\n", spaceshipPos.x, spaceshipPos.y, spaceshipPos.z);
-		printf("spaceshipDir = glm::vec3(%ff, %ff, %ff);\n", spaceshipDir.x, spaceshipDir.y, spaceshipDir.z);
-	}
-
-	//cameraDir = glm::normalize(-cameraPos);
-
-}
-
-
-// tworzenia cubeMap
-unsigned int loadCubemap(std::vector<std::string> faces)
-{
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-	int w, h;
-	unsigned char* data;
-	for (unsigned int i = 0; i < 6; i++)
-	{
-		unsigned char* image = SOIL_load_image(faces[i].c_str(), &w, &h, 0, SOIL_LOAD_RGBA);
-		glTexImage2D(
-			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-			0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image
-		);
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	return textureID;
-}
 
 // funkcja jest glowna petla
 void renderLoop(GLFWwindow* window) {
